@@ -168,7 +168,7 @@ namespace Catch {
         m_reporter->testGroupEnded(TestGroupStats(GroupInfo(testSpec, groupIndex, groupsCount), totals, aborting()));
     }
 
-    Totals RunContext::runTest(TestCase const& testCase) {
+    tc::cotask<Totals> RunContext::runTest(TestCase const& testCase) {
         Totals prevTotals = m_totals;
 
         std::string redirectedCout;
@@ -187,7 +187,7 @@ namespace Catch {
         do {
             m_trackerContext.startCycle();
             m_testCaseTracker = &SectionTracker::acquire(m_trackerContext, TestCaseTracking::NameAndLocation(testInfo.name, testInfo.lineInfo));
-            runCurrentTest(redirectedCout, redirectedCerr);
+            TC_AWAIT(runCurrentTest(redirectedCout, redirectedCerr));
         } while (!m_testCaseTracker->isSuccessfullyCompleted() && !aborting());
 
         Totals deltaTotals = m_totals.delta(prevTotals);
@@ -206,7 +206,7 @@ namespace Catch {
         m_activeTestCase = nullptr;
         m_testCaseTracker = nullptr;
 
-        return deltaTotals;
+        TC_RETURN(deltaTotals);
     }
 
     IConfigPtr RunContext::config() const {
@@ -400,7 +400,7 @@ namespace Catch {
         return m_totals.assertions.failed >= static_cast<std::size_t>(m_config->abortAfter());
     }
 
-    void RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
+    tc::cotask<void> RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
         auto const& testCaseInfo = m_activeTestCase->getTestCaseInfo();
         SectionInfo testCaseSection(testCaseInfo.lineInfo, testCaseInfo.name);
         m_reporter->sectionStarting(testCaseSection);
@@ -418,15 +418,15 @@ namespace Catch {
                 RedirectedStreams redirectedStreams(redirectedCout, redirectedCerr);
 
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #else
                 OutputRedirect r(redirectedCout, redirectedCerr);
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #endif
             } else {
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
             }
             duration = timer.getElapsedSeconds();
         } CATCH_CATCH_ANON (TestFailureException&) {
@@ -451,9 +451,9 @@ namespace Catch {
         m_reporter->sectionEnded(testCaseSectionStats);
     }
 
-    void RunContext::invokeActiveTestCase() {
+    tc::cotask<void> RunContext::invokeActiveTestCase() {
         FatalConditionHandlerGuard _(&m_fatalConditionhandler);
-        m_activeTestCase->invoke();
+        TC_AWAIT(m_activeTestCase->invoke());
     }
 
     void RunContext::handleUnfinishedSections() {

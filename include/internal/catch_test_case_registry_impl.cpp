@@ -154,10 +154,10 @@ namespace Catch {
 
 
     ///////////////////////////////////////////////////////////////////////////
-    TestInvokerAsFunction::TestInvokerAsFunction( void(*testAsFunction)() ) noexcept : m_testAsFunction( testAsFunction ) {}
+    TestInvokerAsFunction::TestInvokerAsFunction( tc::cotask<void>(*testAsFunction)() ) noexcept : m_testAsFunction( testAsFunction ) {}
 
-    void TestInvokerAsFunction::invoke() const {
-        m_testAsFunction();
+    tc::cotask<void> TestInvokerAsFunction::invoke() const {
+        TC_AWAIT(m_testAsFunction());
     }
 
     std::string extractClassName( StringRef const& classOrQualifiedMethodName ) {

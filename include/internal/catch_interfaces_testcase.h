@@ -8,6 +8,8 @@
 #ifndef TWOBLUECUBES_CATCH_INTERFACES_TESTCASE_H_INCLUDED
 #define TWOBLUECUBES_CATCH_INTERFACES_TESTCASE_H_INCLUDED
 
+#include <tconcurrent/coroutine.hpp>
+
 #include <vector>
 
 namespace Catch {
@@ -15,7 +17,7 @@ namespace Catch {
     class TestSpec;
 
     struct ITestInvoker {
-        virtual void invoke () const = 0;
+        virtual tc::cotask<void> invoke () const = 0;
         virtual ~ITestInvoker();
     };
 

@@ -33,23 +33,23 @@ namespace Catch {
         void useConfigData( ConfigData const& configData );
 
         template<typename CharT>
-        int run(int argc, CharT const * const argv[]) {
+        tc::cotask<int> run(int argc, CharT const * const argv[]) {
             if (m_startupExceptions)
-                return 1;
+                TC_RETURN(1);
             int returnCode = applyCommandLine(argc, argv);
             if (returnCode == 0)
-                returnCode = run();
-            return returnCode;
+                returnCode = TC_AWAIT(run());
+            TC_RETURN(returnCode);
         }
     
-        int run();
+        tc::cotask<int> run();
 
         clara::Parser const& cli() const;
         void cli( clara::Parser const& newParser );
         ConfigData& configData();
         Config& config();
     private:
-        int runInternal();
+        tc::cotask<int> runInternal();
 
         clara::Parser m_cli;
         ConfigData m_configData;

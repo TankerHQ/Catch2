@@ -1,6 +1,6 @@
 /*
  *  Catch v2.13.6
- *  Generated: 2021-04-16 18:23:38.044268
+ *  Generated: 2021-12-23 15:49:32.831000
  *  ----------------------------------------------------------
  *  This file has been merged from multiple headers. Please don't edit it directly
  *  Copyright (c) 2021 Two Blue Cubes Ltd. All rights reserved.
@@ -561,6 +561,8 @@ namespace Catch {
 
 // start catch_interfaces_testcase.h
 
+#include <tconcurrent/coroutine.hpp>
+
 #include <vector>
 
 namespace Catch {
@@ -568,7 +570,7 @@ namespace Catch {
     class TestSpec;
 
     struct ITestInvoker {
-        virtual void invoke () const = 0;
+        virtual tc::cotask<void> invoke () const = 0;
         virtual ~ITestInvoker();
     };
 
@@ -958,20 +960,20 @@ namespace Catch {
 
 template<typename C>
 class TestInvokerAsMethod : public ITestInvoker {
-    void (C::*m_testAsMethod)();
+    tc::cotask<void> (C::*m_testAsMethod)();
 public:
-    TestInvokerAsMethod( void (C::*testAsMethod)() ) noexcept : m_testAsMethod( testAsMethod ) {}
+    TestInvokerAsMethod( tc::cotask<void> (C::*testAsMethod)() ) noexcept : m_testAsMethod( testAsMethod ) {}
 
-    void invoke() const override {
+    tc::cotask<void> invoke() const override {
         C obj;
-        (obj.*m_testAsMethod)();
+        TC_AWAIT((obj.*m_testAsMethod)());
     }
 };
 
-auto makeTestInvoker( void(*testAsFunction)() ) noexcept -> ITestInvoker*;
+auto makeTestInvoker( tc::cotask<void>(*testAsFunction)() ) noexcept -> ITestInvoker*;
 
 template<typename C>
-auto makeTestInvoker( void (C::*testAsMethod)() ) noexcept -> ITestInvoker* {
+auto makeTestInvoker( tc::cotask<void> (C::*testAsMethod)() ) noexcept -> ITestInvoker* {
     return new(std::nothrow) TestInvokerAsMethod<C>( testAsMethod );
 }
 
@@ -994,10 +996,10 @@ struct AutoReg : NonCopyable {
     #define INTERNAL_CATCH_TESTCASE_METHOD_NO_REGISTRATION( TestName, ClassName, ... ) \
         namespace{                        \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName) { \
-                void test();              \
+                tc::cotask<void> test();              \
             };                            \
         }                                 \
-        void TestName::test()
+        tc::cotask<void> TestName::test()
     #define INTERNAL_CATCH_TEMPLATE_TEST_CASE_NO_REGISTRATION_2( TestName, TestFunc, Name, Tags, Signature, ... )  \
         INTERNAL_CATCH_DEFINE_SIG_TEST(TestFunc, INTERNAL_CATCH_REMOVE_PARENS(Signature))
     #define INTERNAL_CATCH_TEMPLATE_TEST_CASE_METHOD_NO_REGISTRATION_2( TestNameClass, TestName, ClassName, Name, Tags, Signature, ... )    \
@@ -1043,12 +1045,12 @@ struct AutoReg : NonCopyable {
 
     ///////////////////////////////////////////////////////////////////////////////
     #define INTERNAL_CATCH_TESTCASE2( TestName, ... ) \
-        static void TestName(); \
+        static tc::cotask<void> TestName(); \
         CATCH_INTERNAL_START_WARNINGS_SUPPRESSION \
         CATCH_INTERNAL_SUPPRESS_GLOBALS_WARNINGS \
         namespace{ Catch::AutoReg INTERNAL_CATCH_UNIQUE_NAME( autoRegistrar )( Catch::makeTestInvoker( &TestName ), CATCH_INTERNAL_LINEINFO, Catch::StringRef(), Catch::NameAndTags{ __VA_ARGS__ } ); } /* NOLINT */ \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
-        static void TestName()
+        static tc::cotask<void> TestName()
     #define INTERNAL_CATCH_TESTCASE( ... ) \
         INTERNAL_CATCH_TESTCASE2( INTERNAL_CATCH_UNIQUE_NAME( ____C_A_T_C_H____T_E_S_T____ ), __VA_ARGS__ )
 
@@ -1065,12 +1067,12 @@ struct AutoReg : NonCopyable {
         CATCH_INTERNAL_SUPPRESS_GLOBALS_WARNINGS \
         namespace{ \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName) { \
-                void test(); \
+                tc::cotask<void> test(); \
             }; \
             Catch::AutoReg INTERNAL_CATCH_UNIQUE_NAME( autoRegistrar ) ( Catch::makeTestInvoker( &TestName::test ), CATCH_INTERNAL_LINEINFO, #ClassName, Catch::NameAndTags{ __VA_ARGS__ } ); /* NOLINT */ \
         } \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
-        void TestName::test()
+        tc::cotask<void> TestName::test()
     #define INTERNAL_CATCH_TEST_CASE_METHOD( ClassName, ... ) \
         INTERNAL_CATCH_TEST_CASE_METHOD2( INTERNAL_CATCH_UNIQUE_NAME( ____C_A_T_C_H____T_E_S_T____ ), ClassName, __VA_ARGS__ )
 
@@ -1132,7 +1134,7 @@ struct AutoReg : NonCopyable {
         CATCH_INTERNAL_SUPPRESS_GLOBALS_WARNINGS                      \
         CATCH_INTERNAL_SUPPRESS_ZERO_VARIADIC_WARNINGS                \
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS              \
-        template<typename TestType> static void TestFuncName();       \
+        template<typename TestType> static tc::cotask<void> TestFuncName();       \
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName) {                                     \
             INTERNAL_CATCH_TYPE_GEN                                                  \
@@ -1158,7 +1160,7 @@ struct AutoReg : NonCopyable {
         }                                                             \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION                       \
         template<typename TestType>                                   \
-        static void TestFuncName()
+        static tc::cotask<void> TestFuncName()
 
 #ifndef CATCH_CONFIG_TRADITIONAL_MSVC_PREPROCESSOR
     #define INTERNAL_CATCH_TEMPLATE_PRODUCT_TEST_CASE(Name, Tags, ...)\
@@ -1180,7 +1182,7 @@ struct AutoReg : NonCopyable {
         CATCH_INTERNAL_START_WARNINGS_SUPPRESSION \
         CATCH_INTERNAL_SUPPRESS_GLOBALS_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS \
-        template<typename TestType> static void TestFunc();       \
+        template<typename TestType> static tc::cotask<void> TestFunc();       \
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName){\
         INTERNAL_CATCH_TYPE_GEN\
@@ -1201,7 +1203,7 @@ struct AutoReg : NonCopyable {
         }}\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION                       \
         template<typename TestType>                                   \
-        static void TestFunc()
+        static tc::cotask<void> TestFunc()
 
     #define INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE(Name, Tags, TmplList) \
         INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_2( INTERNAL_CATCH_UNIQUE_NAME( ____C_A_T_C_H____T_E_M_P_L_A_T_E____T_E_S_T____ ), INTERNAL_CATCH_UNIQUE_NAME( ____C_A_T_C_H____T_E_M_P_L_A_T_E____T_E_S_T____F_U_N_C____ ), Name, Tags, TmplList )
@@ -1258,7 +1260,7 @@ struct AutoReg : NonCopyable {
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS \
         template<typename TestType> \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName <TestType>) { \
-                void test();\
+                tc::cotask<void> test();\
             };\
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestNameClass) {\
@@ -1285,7 +1287,7 @@ struct AutoReg : NonCopyable {
         }\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
         template<typename TestType> \
-        void TestName<TestType>::test()
+        tc::cotask<void> TestName<TestType>::test()
 
 #ifndef CATCH_CONFIG_TRADITIONAL_MSVC_PREPROCESSOR
     #define INTERNAL_CATCH_TEMPLATE_PRODUCT_TEST_CASE_METHOD( ClassName, Name, Tags, ... )\
@@ -1309,7 +1311,7 @@ struct AutoReg : NonCopyable {
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS \
         template<typename TestType> \
         struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName <TestType>) { \
-            void test();\
+            tc::cotask<void> test();\
         };\
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName){ \
@@ -1331,7 +1333,7 @@ struct AutoReg : NonCopyable {
         }}\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
         template<typename TestType> \
-        void TestName<TestType>::test()
+        tc::cotask<void> TestName<TestType>::test()
 
 #define INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_METHOD(ClassName, Name, Tags, TmplList) \
         INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_METHOD_2( INTERNAL_CATCH_UNIQUE_NAME( ____C_A_T_C_H____T_E_M_P_L_A_T_E____T_E_S_T____ ), INTERNAL_CATCH_UNIQUE_NAME( ____C_A_T_C_H____T_E_M_P_L_A_T_E____T_E_S_T____F_U_N_C____ ), ClassName, Name, Tags, TmplList )
@@ -4804,7 +4806,7 @@ namespace Catch {
 
         TestCase withName( std::string const& _newName ) const;
 
-        void invoke() const;
+        tc::cotask<void> invoke() const;
 
         TestCaseInfo const& getTestCaseInfo() const;
 
@@ -8039,6 +8041,8 @@ namespace Catch {
 } // end namespace Catch
 
 // end catch_fatal_condition.h
+#include <tconcurrent/coroutine.hpp>
+
 #include <string>
 
 namespace Catch {
@@ -8060,7 +8064,7 @@ namespace Catch {
         void testGroupStarting( std::string const& testSpec, std::size_t groupIndex, std::size_t groupsCount );
         void testGroupEnded( std::string const& testSpec, Totals const& totals, std::size_t groupIndex, std::size_t groupsCount );
 
-        Totals runTest(TestCase const& testCase);
+        tc::cotask<Totals> runTest(TestCase const& testCase);
 
         IConfigPtr config() const;
         IStreamingReporter& reporter() const;
@@ -8128,8 +8132,8 @@ namespace Catch {
 
     private:
 
-        void runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
-        void invokeActiveTestCase();
+        tc::cotask<void> runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
+        tc::cotask<void> invokeActiveTestCase();
 
         void resetAssertionInfo();
         bool testForMissingAssertions( Counts& assertions );
@@ -12304,11 +12308,11 @@ namespace Catch {
     ///////////////////////////////////////////////////////////////////////////
 
     class TestInvokerAsFunction : public ITestInvoker {
-        void(*m_testAsFunction)();
+        tc::cotask<void>(*m_testAsFunction)();
     public:
-        TestInvokerAsFunction( void(*testAsFunction)() ) noexcept;
+        TestInvokerAsFunction( tc::cotask<void>(*testAsFunction)() ) noexcept;
 
-        void invoke() const override;
+        tc::cotask<void> invoke() const override;
     };
 
     std::string extractClassName( StringRef const& classOrQualifiedMethodName );
@@ -12729,7 +12733,7 @@ namespace Catch {
         m_reporter->testGroupEnded(TestGroupStats(GroupInfo(testSpec, groupIndex, groupsCount), totals, aborting()));
     }
 
-    Totals RunContext::runTest(TestCase const& testCase) {
+    tc::cotask<Totals> RunContext::runTest(TestCase const& testCase) {
         Totals prevTotals = m_totals;
 
         std::string redirectedCout;
@@ -12747,7 +12751,7 @@ namespace Catch {
         do {
             m_trackerContext.startCycle();
             m_testCaseTracker = &SectionTracker::acquire(m_trackerContext, TestCaseTracking::NameAndLocation(testInfo.name, testInfo.lineInfo));
-            runCurrentTest(redirectedCout, redirectedCerr);
+            TC_AWAIT(runCurrentTest(redirectedCout, redirectedCerr));
         } while (!m_testCaseTracker->isSuccessfullyCompleted() && !aborting());
 
         Totals deltaTotals = m_totals.delta(prevTotals);
@@ -12766,7 +12770,7 @@ namespace Catch {
         m_activeTestCase = nullptr;
         m_testCaseTracker = nullptr;
 
-        return deltaTotals;
+        TC_RETURN(deltaTotals);
     }
 
     IConfigPtr RunContext::config() const {
@@ -12960,7 +12964,7 @@ namespace Catch {
         return m_totals.assertions.failed >= static_cast<std::size_t>(m_config->abortAfter());
     }
 
-    void RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
+    tc::cotask<void> RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
         auto const& testCaseInfo = m_activeTestCase->getTestCaseInfo();
         SectionInfo testCaseSection(testCaseInfo.lineInfo, testCaseInfo.name);
         m_reporter->sectionStarting(testCaseSection);
@@ -12978,15 +12982,15 @@ namespace Catch {
                 RedirectedStreams redirectedStreams(redirectedCout, redirectedCerr);
 
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #else
                 OutputRedirect r(redirectedCout, redirectedCerr);
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #endif
             } else {
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
             }
             duration = timer.getElapsedSeconds();
         } CATCH_CATCH_ANON (TestFailureException&) {
@@ -13011,9 +13015,9 @@ namespace Catch {
         m_reporter->sectionEnded(testCaseSectionStats);
     }
 
-    void RunContext::invokeActiveTestCase() {
+    tc::cotask<void> RunContext::invokeActiveTestCase() {
         FatalConditionHandlerGuard _(&m_fatalConditionhandler);
-        m_activeTestCase->invoke();
+        TC_AWAIT(m_activeTestCase->invoke());
     }
 
     void RunContext::handleUnfinishedSections() {
@@ -13219,23 +13223,23 @@ namespace Catch {
         void useConfigData( ConfigData const& configData );
 
         template<typename CharT>
-        int run(int argc, CharT const * const argv[]) {
+        tc::cotask<int> run(int argc, CharT const * const argv[]) {
             if (m_startupExceptions)
-                return 1;
+                TC_RETURN(1);
             int returnCode = applyCommandLine(argc, argv);
             if (returnCode == 0)
-                returnCode = run();
-            return returnCode;
+                returnCode = TC_AWAIT(run());
+            TC_RETURN(returnCode);
         }
 
-        int run();
+        tc::cotask<int> run();
 
         clara::Parser const& cli() const;
         void cli( clara::Parser const& newParser );
         ConfigData& configData();
         Config& config();
     private:
-        int runInternal();
+        tc::cotask<int> runInternal();
 
         clara::Parser m_cli;
         ConfigData m_configData;
@@ -13334,13 +13338,13 @@ namespace Catch {
                 }
             }
 
-            Totals execute() {
+            tc::cotask<Totals> execute() {
                 auto const& invalidArgs = m_config->testSpec().getInvalidArgs();
                 Totals totals;
                 m_context.testGroupStarting(m_config->name(), 1, 1);
                 for (auto const& testCase : m_tests) {
                     if (!m_context.aborting())
-                        totals += m_context.runTest(*testCase);
+                        totals += TC_AWAIT(m_context.runTest(*testCase));
                     else
                         m_context.reporter().skipTest(*testCase);
                 }
@@ -13358,7 +13362,7 @@ namespace Catch {
                 }
 
                 m_context.testGroupEnded(m_config->name(), totals, 1, 1);
-                return totals;
+                TC_RETURN(totals);
             }
 
         private:
@@ -13497,17 +13501,17 @@ namespace Catch {
         m_config.reset();
     }
 
-    int Session::run() {
+    tc::cotask<int> Session::run() {
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeStart ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before starting" << std::endl;
             static_cast<void>(std::getchar());
         }
-        int exitCode = runInternal();
+        int exitCode = TC_AWAIT(runInternal());
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeExit ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before exiting, with code: " << exitCode << std::endl;
             static_cast<void>(std::getchar());
         }
-        return exitCode;
+        TC_RETURN(exitCode);
     }
 
     clara::Parser const& Session::cli() const {
@@ -13525,12 +13529,12 @@ namespace Catch {
         return *m_config;
     }
 
-    int Session::runInternal() {
+    tc::cotask<int> Session::runInternal() {
         if( m_startupExceptions )
-            return 1;
+            TC_RETURN(1);
 
         if (m_configData.showHelp || m_configData.libIdentify) {
-            return 0;
+            TC_RETURN(0);
         }
 
         CATCH_TRY {
@@ -13543,23 +13547,23 @@ namespace Catch {
 
             // Handle list request
             if( Option<std::size_t> listed = list( m_config ) )
-                return static_cast<int>( *listed );
+                TC_RETURN(static_cast<int>( *listed ));
 
             TestGroup tests { m_config };
-            auto const totals = tests.execute();
+            auto const totals = TC_AWAIT(tests.execute());
 
             if( m_config->warnAboutNoTests() && totals.error == -1 )
-                return 2;
+                TC_RETURN(2);
 
             // Note that on unices only the lower 8 bits are usually used, clamping
             // the return value to 255 prevents false negative when some multiple
             // of 256 tests has failed
-            return (std::min) (MaxExitCode, (std::max) (totals.error, static_cast<int>(totals.assertions.failed)));
+            TC_RETURN((std::min) (MaxExitCode, (std::max) (totals.error, static_cast<int>(totals.assertions.failed))));
         }
 #if !defined(CATCH_CONFIG_DISABLE_EXCEPTIONS)
         catch( std::exception& ex ) {
             Catch::cerr() << ex.what() << std::endl;
-            return MaxExitCode;
+            TC_RETURN(MaxExitCode);
         }
 #endif
     }
@@ -14152,8 +14156,8 @@ namespace Catch {
         return other;
     }
 
-    void TestCase::invoke() const {
-        test->invoke();
+    tc::cotask<void> TestCase::invoke() const {
+        TC_AWAIT(test->invoke());
     }
 
     bool TestCase::operator == ( TestCase const& other ) const {
@@ -14311,10 +14315,10 @@ namespace Catch {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    TestInvokerAsFunction::TestInvokerAsFunction( void(*testAsFunction)() ) noexcept : m_testAsFunction( testAsFunction ) {}
+    TestInvokerAsFunction::TestInvokerAsFunction( tc::cotask<void>(*testAsFunction)() ) noexcept : m_testAsFunction( testAsFunction ) {}
 
-    void TestInvokerAsFunction::invoke() const {
-        m_testAsFunction();
+    tc::cotask<void> TestInvokerAsFunction::invoke() const {
+        TC_AWAIT(m_testAsFunction());
     }
 
     std::string extractClassName( StringRef const& classOrQualifiedMethodName ) {
@@ -14577,7 +14581,7 @@ using TestCaseTracking::SectionTracker;
 
 namespace Catch {
 
-    auto makeTestInvoker( void(*testAsFunction)() ) noexcept -> ITestInvoker* {
+    auto makeTestInvoker( tc::cotask<void>(*testAsFunction)() ) noexcept -> ITestInvoker* {
         return new(std::nothrow) TestInvokerAsFunction( testAsFunction );
     }
 
