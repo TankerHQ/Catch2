@@ -52,11 +52,11 @@ namespace Catch {
     ///////////////////////////////////////////////////////////////////////////
 
     class TestInvokerAsFunction : public ITestInvoker {
-        void(*m_testAsFunction)();
+        tc::cotask<void>(*m_testAsFunction)();
     public:
-        TestInvokerAsFunction( void(*testAsFunction)() ) noexcept;
+        TestInvokerAsFunction( tc::cotask<void>(*testAsFunction)() ) noexcept;
 
-        void invoke() const override;
+        tc::cotask<void> invoke() const override;
     };
 
 

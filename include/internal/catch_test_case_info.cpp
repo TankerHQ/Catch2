@@ -164,8 +164,8 @@ namespace Catch {
         return other;
     }
 
-    void TestCase::invoke() const {
-        test->invoke();
+    tc::cotask<void> TestCase::invoke() const {
+        TC_AWAIT(test->invoke());
     }
 
     bool TestCase::operator == ( TestCase const& other ) const {

@@ -80,13 +80,13 @@ namespace Catch {
                 }
             }
 
-            Totals execute() {
+            tc::cotask<Totals> execute() {
                 auto const& invalidArgs = m_config->testSpec().getInvalidArgs();
                 Totals totals;
                 m_context.testGroupStarting(m_config->name(), 1, 1);
                 for (auto const& testCase : m_tests) {
                     if (!m_context.aborting())
-                        totals += m_context.runTest(*testCase);
+                        totals += TC_AWAIT(m_context.runTest(*testCase));
                     else
                         m_context.reporter().skipTest(*testCase);
                 }
@@ -104,7 +104,7 @@ namespace Catch {
                 }
 
                 m_context.testGroupEnded(m_config->name(), totals, 1, 1);
-                return totals;
+                TC_RETURN(totals);
             }
 
         private:
@@ -247,17 +247,17 @@ namespace Catch {
         m_config.reset();
     }
 
-    int Session::run() {
+    tc::cotask<int> Session::run() {
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeStart ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before starting" << std::endl;
             static_cast<void>(std::getchar());
         }
-        int exitCode = runInternal();
+        int exitCode = TC_AWAIT(runInternal());
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeExit ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before exiting, with code: " << exitCode << std::endl;
             static_cast<void>(std::getchar());
         }
-        return exitCode;
+        TC_RETURN(exitCode);
     }
 
     clara::Parser const& Session::cli() const {
@@ -275,12 +275,12 @@ namespace Catch {
         return *m_config;
     }
 
-    int Session::runInternal() {
+    tc::cotask<int> Session::runInternal() {
         if( m_startupExceptions )
-            return 1;
+            TC_RETURN(1);
 
         if (m_configData.showHelp || m_configData.libIdentify) {
-            return 0;
+            TC_RETURN(0);
         }
 
         CATCH_TRY {
@@ -293,23 +293,23 @@ namespace Catch {
 
             // Handle list request
             if( Option<std::size_t> listed = list( m_config ) )
-                return static_cast<int>( *listed );
+                TC_RETURN(static_cast<int>( *listed ));
 
             TestGroup tests { m_config };
-            auto const totals = tests.execute();
+            auto const totals = TC_AWAIT(tests.execute());
 
             if( m_config->warnAboutNoTests() && totals.error == -1 )
-                return 2;
+                TC_RETURN(2);
 
             // Note that on unices only the lower 8 bits are usually used, clamping
             // the return value to 255 prevents false negative when some multiple
             // of 256 tests has failed
-            return (std::min) (MaxExitCode, (std::max) (totals.error, static_cast<int>(totals.assertions.failed)));
+            TC_RETURN((std::min) (MaxExitCode, (std::max) (totals.error, static_cast<int>(totals.assertions.failed))));
         }
 #if !defined(CATCH_CONFIG_DISABLE_EXCEPTIONS)
         catch( std::exception& ex ) {
             Catch::cerr() << ex.what() << std::endl;
-            return MaxExitCode;
+            TC_RETURN(MaxExitCode);
         }
 #endif
     }

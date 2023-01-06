@@ -12,7 +12,7 @@
 
 namespace Catch {
 
-    auto makeTestInvoker( void(*testAsFunction)() ) noexcept -> ITestInvoker* {
+    auto makeTestInvoker( tc::cotask<void>(*testAsFunction)() ) noexcept -> ITestInvoker* {
         return new(std::nothrow) TestInvokerAsFunction( testAsFunction );
     }
 

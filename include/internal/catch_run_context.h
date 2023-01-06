@@ -23,6 +23,8 @@
 #include "catch_assertionhandler.h"
 #include "catch_fatal_condition.h"
 
+#include <tconcurrent/coroutine.hpp>
+
 #include <string>
 
 namespace Catch {
@@ -44,7 +46,7 @@ namespace Catch {
         void testGroupStarting( std::string const& testSpec, std::size_t groupIndex, std::size_t groupsCount );
         void testGroupEnded( std::string const& testSpec, Totals const& totals, std::size_t groupIndex, std::size_t groupsCount );
 
-        Totals runTest(TestCase const& testCase);
+        tc::cotask<Totals> runTest(TestCase const& testCase);
 
         IConfigPtr config() const;
         IStreamingReporter& reporter() const;
@@ -112,8 +114,8 @@ namespace Catch {
 
     private:
 
-        void runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
-        void invokeActiveTestCase();
+        tc::cotask<void> runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
+        tc::cotask<void> invokeActiveTestCase();
 
         void resetAssertionInfo();
         bool testForMissingAssertions( Counts& assertions );

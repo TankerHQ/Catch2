@@ -66,7 +66,7 @@ namespace Catch {
 
         TestCase withName( std::string const& _newName ) const;
 
-        void invoke() const;
+        tc::cotask<void> invoke() const;
 
         TestCaseInfo const& getTestCaseInfo() const;
 
