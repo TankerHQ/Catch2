@@ -122,7 +122,7 @@
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS       \
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_COMMA_WARNINGS \
-        template<typename TestType> static void TestFuncName();       \
+        template<typename TestType> static tc::cotask<void> TestFuncName();       \
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName) {                                     \
             INTERNAL_CATCH_TYPE_GEN                                                  \
@@ -148,7 +148,7 @@
         }                                                             \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION                       \
         template<typename TestType>                                   \
-        static void TestFuncName()
+        static tc::cotask<void> TestFuncName()
 
 #ifndef CATCH_CONFIG_TRADITIONAL_MSVC_PREPROCESSOR
     #define INTERNAL_CATCH_TEMPLATE_PRODUCT_TEST_CASE(Name, Tags, ...)\
@@ -172,7 +172,7 @@
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_COMMA_WARNINGS \
-        template<typename TestType> static void TestFunc();       \
+        template<typename TestType> static tc::cotask<void> TestFunc();       \
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName){\
         INTERNAL_CATCH_TYPE_GEN\
@@ -193,7 +193,7 @@
         }}\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION                       \
         template<typename TestType>                                   \
-        static void TestFunc()
+        static tc::cotask<void> TestFunc()
 
     #define INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE(Name, Tags, TmplList) \
         INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_2( INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), Name, Tags, TmplList )
@@ -253,7 +253,7 @@
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         template<typename TestType> \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName <TestType>) { \
-                void test();\
+                tc::cotask<void> test();\
             };\
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestNameClass) {\
@@ -280,7 +280,7 @@
         }\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
         template<typename TestType> \
-        void TestName<TestType>::test()
+        tc::cotask<void> TestName<TestType>::test()
 
 #ifndef CATCH_CONFIG_TRADITIONAL_MSVC_PREPROCESSOR
     #define INTERNAL_CATCH_TEMPLATE_PRODUCT_TEST_CASE_METHOD( ClassName, Name, Tags, ... )\
@@ -306,7 +306,7 @@
         CATCH_INTERNAL_SUPPRESS_COMMA_WARNINGS \
         template<typename TestType> \
         struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName <TestType>) { \
-            void test();\
+            tc::cotask<void> test();\
         };\
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName){ \
@@ -328,7 +328,7 @@
         }}\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
         template<typename TestType> \
-        void TestName<TestType>::test()
+        tc::cotask<void> TestName<TestType>::test()
 
 #define INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_METHOD(ClassName, Name, Tags, TmplList) \
         INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_METHOD_2( INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), ClassName, Name, Tags, TmplList )

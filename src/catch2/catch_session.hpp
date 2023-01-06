@@ -14,6 +14,8 @@
 #include <catch2/internal/catch_unique_ptr.hpp>
 #include <catch2/internal/catch_config_wchar.hpp>
 
+#include <tconcurrent/coroutine.hpp>
+
 namespace Catch {
 
     class Session : Detail::NonCopyable {
@@ -33,23 +35,23 @@ namespace Catch {
         void useConfigData( ConfigData const& configData );
 
         template<typename CharT>
-        int run(int argc, CharT const * const argv[]) {
+        tc::cotask<int> run(int argc, CharT const * const argv[]) {
             if (m_startupExceptions)
-                return 1;
+                TC_RETURN(1);
             int returnCode = applyCommandLine(argc, argv);
             if (returnCode == 0)
-                returnCode = run();
-            return returnCode;
+                returnCode = TC_AWAIT(run());
+            TC_RETURN(returnCode);
         }
 
-        int run();
+        tc::cotask<int> run();
 
         Clara::Parser const& cli() const;
         void cli( Clara::Parser const& newParser );
         ConfigData& configData();
         Config& config();
     private:
-        int runInternal();
+        tc::cotask<int> runInternal();
 
         Clara::Parser m_cli;
         ConfigData m_configData;

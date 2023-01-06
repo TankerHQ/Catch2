@@ -77,6 +77,8 @@ set(SELF_TEST_DIR ${CATCH_DIR}/tests/SelfTest)
 set(BENCHMARK_DIR ${CATCH_DIR}/tests/Benchmark)
 set(EXAMPLES_DIR ${CATCH_DIR}/examples)
 
+find_package(tconcurrent REQUIRED)
+
 # We need to bring-in the variables defined there to this scope
 add_subdirectory(src)
 

@@ -14,6 +14,7 @@
 #include <catch2/internal/catch_test_registry.hpp>
 #include <catch2/internal/catch_unique_ptr.hpp>
 
+#include <tconcurrent/coroutine.hpp>
 
 #include <string>
 #include <vector>
@@ -110,8 +111,8 @@ namespace Catch {
         TestCaseHandle(TestCaseInfo* info, ITestInvoker* invoker) :
             m_info(info), m_invoker(invoker) {}
 
-        void invoke() const {
-            m_invoker->invoke();
+        tc::cotask<void> invoke() const {
+            TC_AWAIT(m_invoker->invoke());
         }
 
         TestCaseInfo const& getTestCaseInfo() const;

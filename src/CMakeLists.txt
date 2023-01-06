@@ -336,6 +336,9 @@ add_library(Catch2 ${ALL_FILES})
 add_build_reproducibility_settings(Catch2)
 add_library(Catch2::Catch2 ALIAS Catch2)
 
+target_link_libraries(Catch2
+    PUBLIC tconcurrent::tconcurrent
+)
 if (ANDROID)
     target_link_libraries(Catch2 INTERFACE log)
 endif()

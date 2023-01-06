@@ -145,8 +145,8 @@ namespace Catch {
 
 
     ///////////////////////////////////////////////////////////////////////////
-    void TestInvokerAsFunction::invoke() const {
-        m_testAsFunction();
+    tc::cotask<void> TestInvokerAsFunction::invoke() const {
+        TC_AWAIT(m_testAsFunction());
     }
 
 } // end namespace Catch

@@ -40,7 +40,7 @@ namespace Catch {
 
         ~RunContext() override;
 
-        Totals runTest(TestCaseHandle const& testCase);
+        tc::cotask<Totals> runTest(TestCaseHandle const& testCase);
 
     public: // IResultCapture
 
@@ -103,8 +103,8 @@ namespace Catch {
 
     private:
 
-        void runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
-        void invokeActiveTestCase();
+        tc::cotask<void> runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
+        tc::cotask<void> invokeActiveTestCase();
 
         void resetAssertionInfo();
         bool testForMissingAssertions( Counts& assertions );

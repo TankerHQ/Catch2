@@ -54,13 +54,13 @@ namespace Catch {
     ///////////////////////////////////////////////////////////////////////////
 
     class TestInvokerAsFunction final : public ITestInvoker {
-        using TestType = void(*)();
+        using TestType = tc::cotask<void>(*)();
         TestType m_testAsFunction;
     public:
         TestInvokerAsFunction(TestType testAsFunction) noexcept:
             m_testAsFunction(testAsFunction) {}
 
-        void invoke() const override;
+        tc::cotask<void> invoke() const override;
     };
 
     ///////////////////////////////////////////////////////////////////////////

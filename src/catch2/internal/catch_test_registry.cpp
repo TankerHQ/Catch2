@@ -48,7 +48,7 @@ namespace Catch {
         }
     } // namespace
 
-    Detail::unique_ptr<ITestInvoker> makeTestInvoker( void(*testAsFunction)() ) {
+    Detail::unique_ptr<ITestInvoker> makeTestInvoker( tc::cotask<void>(*testAsFunction)() ) {
         return Detail::make_unique<TestInvokerAsFunction>( testAsFunction );
     }
 

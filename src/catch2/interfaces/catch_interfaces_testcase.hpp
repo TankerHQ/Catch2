@@ -8,6 +8,8 @@
 #ifndef CATCH_INTERFACES_TESTCASE_HPP_INCLUDED
 #define CATCH_INTERFACES_TESTCASE_HPP_INCLUDED
 
+#include <tconcurrent/coroutine.hpp>
+
 #include <vector>
 
 namespace Catch {
@@ -17,7 +19,7 @@ namespace Catch {
 
     class ITestInvoker {
     public:
-        virtual void invoke () const = 0;
+        virtual tc::cotask<void> invoke () const = 0;
         virtual ~ITestInvoker(); // = default
     };
 

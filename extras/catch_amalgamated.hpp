@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: BSL-1.0
 
 //  Catch v3.2.1
-//  Generated: 2022-12-09 23:01:14.526666
+//  Generated: 2023-01-10 10:36:10.806545
 //  ----------------------------------------------------------
 //  This file is an amalgamation of multiple different files.
 //  You probably shouldn't edit it directly.
@@ -5244,6 +5244,8 @@ namespace Catch {
 
 #endif // CATCH_COMMANDLINE_HPP_INCLUDED
 
+#include <tconcurrent/coroutine.hpp>
+
 namespace Catch {
 
     class Session : Detail::NonCopyable {
@@ -5263,23 +5265,23 @@ namespace Catch {
         void useConfigData( ConfigData const& configData );
 
         template<typename CharT>
-        int run(int argc, CharT const * const argv[]) {
+        tc::cotask<int> run(int argc, CharT const * const argv[]) {
             if (m_startupExceptions)
-                return 1;
+                TC_RETURN(1);
             int returnCode = applyCommandLine(argc, argv);
             if (returnCode == 0)
-                returnCode = run();
-            return returnCode;
+                returnCode = TC_AWAIT(run());
+            TC_RETURN(returnCode);
         }
 
-        int run();
+        tc::cotask<int> run();
 
         Clara::Parser const& cli() const;
         void cli( Clara::Parser const& newParser );
         ConfigData& configData();
         Config& config();
     private:
-        int runInternal();
+        tc::cotask<int> runInternal();
 
         Clara::Parser m_cli;
         ConfigData m_configData;
@@ -6073,6 +6075,8 @@ namespace Catch {
 #ifndef CATCH_INTERFACES_TESTCASE_HPP_INCLUDED
 #define CATCH_INTERFACES_TESTCASE_HPP_INCLUDED
 
+#include <tconcurrent/coroutine.hpp>
+
 #include <vector>
 
 namespace Catch {
@@ -6082,7 +6086,7 @@ namespace Catch {
 
     class ITestInvoker {
     public:
-        virtual void invoke () const = 0;
+        virtual tc::cotask<void> invoke () const = 0;
         virtual ~ITestInvoker(); // = default
     };
 
@@ -6121,6 +6125,8 @@ namespace Catch {
 
 #endif // CATCH_PREPROCESSOR_REMOVE_PARENS_HPP_INCLUDED
 
+#include <tconcurrent/coroutine.hpp>
+
 // GCC 5 and older do not properly handle disabling unused-variable warning
 // with a _Pragma. This means that we have to leak the suppression to the
 // user code as well :-(
@@ -6134,20 +6140,20 @@ namespace Catch {
 
 template<typename C>
 class TestInvokerAsMethod : public ITestInvoker {
-    void (C::*m_testAsMethod)();
+    tc::cotask<void> (C::*m_testAsMethod)();
 public:
-    TestInvokerAsMethod( void (C::*testAsMethod)() ) noexcept : m_testAsMethod( testAsMethod ) {}
+    TestInvokerAsMethod( tc::cotask<void> (C::*testAsMethod)() ) noexcept : m_testAsMethod( testAsMethod ) {}
 
-    void invoke() const override {
+    tc::cotask<void> invoke() const override {
         C obj;
-        (obj.*m_testAsMethod)();
+        TC_AWAIT((obj.*m_testAsMethod)());
     }
 };
 
-Detail::unique_ptr<ITestInvoker> makeTestInvoker( void(*testAsFunction)() );
+Detail::unique_ptr<ITestInvoker> makeTestInvoker( tc::cotask<void>(*testAsFunction)() );
 
 template<typename C>
-Detail::unique_ptr<ITestInvoker> makeTestInvoker( void (C::*testAsMethod)() ) {
+Detail::unique_ptr<ITestInvoker> makeTestInvoker( tc::cotask<void> (C::*testAsMethod)() ) {
     return Detail::make_unique<TestInvokerAsMethod<C>>( testAsMethod );
 }
 
@@ -6171,21 +6177,21 @@ struct AutoReg : Detail::NonCopyable {
     #define INTERNAL_CATCH_TESTCASE_METHOD_NO_REGISTRATION( TestName, ClassName, ... ) \
         namespace{                        \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName) { \
-                void test();              \
+                tc::cotask<void> test();              \
             };                            \
         }                                 \
-        void TestName::test()
+        tc::cotask<void> TestName::test()
 #endif
 
     ///////////////////////////////////////////////////////////////////////////////
     #define INTERNAL_CATCH_TESTCASE2( TestName, ... ) \
-        static void TestName(); \
+        static tc::cotask<void> TestName(); \
         CATCH_INTERNAL_START_WARNINGS_SUPPRESSION \
         CATCH_INTERNAL_SUPPRESS_GLOBALS_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         namespace{ Catch::AutoReg INTERNAL_CATCH_UNIQUE_NAME( autoRegistrar )( Catch::makeTestInvoker( &TestName ), CATCH_INTERNAL_LINEINFO, Catch::StringRef(), Catch::NameAndTags{ __VA_ARGS__ } ); } /* NOLINT */ \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
-        static void TestName()
+        static tc::cotask<void> TestName()
     #define INTERNAL_CATCH_TESTCASE( ... ) \
         INTERNAL_CATCH_TESTCASE2( INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEST_ ), __VA_ARGS__ )
 
@@ -6204,12 +6210,12 @@ struct AutoReg : Detail::NonCopyable {
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         namespace{ \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName) { \
-                void test(); \
+                tc::cotask<void> test(); \
             }; \
             Catch::AutoReg INTERNAL_CATCH_UNIQUE_NAME( autoRegistrar ) ( Catch::makeTestInvoker( &TestName::test ), CATCH_INTERNAL_LINEINFO, #ClassName, Catch::NameAndTags{ __VA_ARGS__ } ); /* NOLINT */ \
         } \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
-        void TestName::test()
+        tc::cotask<void> TestName::test()
     #define INTERNAL_CATCH_TEST_CASE_METHOD( ClassName, ... ) \
         INTERNAL_CATCH_TEST_CASE_METHOD2( INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEST_ ), ClassName, __VA_ARGS__ )
 
@@ -6776,7 +6782,7 @@ struct AutoReg : Detail::NonCopyable {
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS       \
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_COMMA_WARNINGS \
-        template<typename TestType> static void TestFuncName();       \
+        template<typename TestType> static tc::cotask<void> TestFuncName();       \
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName) {                                     \
             INTERNAL_CATCH_TYPE_GEN                                                  \
@@ -6802,7 +6808,7 @@ struct AutoReg : Detail::NonCopyable {
         }                                                             \
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION                       \
         template<typename TestType>                                   \
-        static void TestFuncName()
+        static tc::cotask<void> TestFuncName()
 
 #ifndef CATCH_CONFIG_TRADITIONAL_MSVC_PREPROCESSOR
     #define INTERNAL_CATCH_TEMPLATE_PRODUCT_TEST_CASE(Name, Tags, ...)\
@@ -6826,7 +6832,7 @@ struct AutoReg : Detail::NonCopyable {
         CATCH_INTERNAL_SUPPRESS_UNUSED_TEMPLATE_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         CATCH_INTERNAL_SUPPRESS_COMMA_WARNINGS \
-        template<typename TestType> static void TestFunc();       \
+        template<typename TestType> static tc::cotask<void> TestFunc();       \
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName){\
         INTERNAL_CATCH_TYPE_GEN\
@@ -6847,7 +6853,7 @@ struct AutoReg : Detail::NonCopyable {
         }}\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION                       \
         template<typename TestType>                                   \
-        static void TestFunc()
+        static tc::cotask<void> TestFunc()
 
     #define INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE(Name, Tags, TmplList) \
         INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_2( INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), Name, Tags, TmplList )
@@ -6907,7 +6913,7 @@ struct AutoReg : Detail::NonCopyable {
         CATCH_INTERNAL_SUPPRESS_UNUSED_VARIABLE_WARNINGS \
         template<typename TestType> \
             struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName <TestType>) { \
-                void test();\
+                tc::cotask<void> test();\
             };\
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestNameClass) {\
@@ -6934,7 +6940,7 @@ struct AutoReg : Detail::NonCopyable {
         }\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
         template<typename TestType> \
-        void TestName<TestType>::test()
+        tc::cotask<void> TestName<TestType>::test()
 
 #ifndef CATCH_CONFIG_TRADITIONAL_MSVC_PREPROCESSOR
     #define INTERNAL_CATCH_TEMPLATE_PRODUCT_TEST_CASE_METHOD( ClassName, Name, Tags, ... )\
@@ -6960,7 +6966,7 @@ struct AutoReg : Detail::NonCopyable {
         CATCH_INTERNAL_SUPPRESS_COMMA_WARNINGS \
         template<typename TestType> \
         struct TestName : INTERNAL_CATCH_REMOVE_PARENS(ClassName <TestType>) { \
-            void test();\
+            tc::cotask<void> test();\
         };\
         namespace {\
         namespace INTERNAL_CATCH_MAKE_NAMESPACE(TestName){ \
@@ -6982,7 +6988,7 @@ struct AutoReg : Detail::NonCopyable {
         }}\
         CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION \
         template<typename TestType> \
-        void TestName<TestType>::test()
+        tc::cotask<void> TestName<TestType>::test()
 
 #define INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_METHOD(ClassName, Name, Tags, TmplList) \
         INTERNAL_CATCH_TEMPLATE_LIST_TEST_CASE_METHOD_2( INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), INTERNAL_CATCH_UNIQUE_NAME( CATCH2_INTERNAL_TEMPLATE_TEST_ ), ClassName, Name, Tags, TmplList )
@@ -7097,6 +7103,7 @@ struct AutoReg : Detail::NonCopyable {
 #define CATCH_TEST_CASE_INFO_HPP_INCLUDED
 
 
+#include <tconcurrent/coroutine.hpp>
 
 #include <string>
 #include <vector>
@@ -7193,8 +7200,8 @@ namespace Catch {
         TestCaseHandle(TestCaseInfo* info, ITestInvoker* invoker) :
             m_info(info), m_invoker(invoker) {}
 
-        void invoke() const {
-            m_invoker->invoke();
+        tc::cotask<void> invoke() const {
+            TC_AWAIT(m_invoker->invoke());
         }
 
         TestCaseInfo const& getTestCaseInfo() const;
@@ -9337,7 +9344,7 @@ namespace Catch {
 
         ~RunContext() override;
 
-        Totals runTest(TestCaseHandle const& testCase);
+        tc::cotask<Totals> runTest(TestCaseHandle const& testCase);
 
     public: // IResultCapture
 
@@ -9400,8 +9407,8 @@ namespace Catch {
 
     private:
 
-        void runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
-        void invokeActiveTestCase();
+        tc::cotask<void> runCurrentTest( std::string& redirectedCout, std::string& redirectedCerr );
+        tc::cotask<void> invokeActiveTestCase();
 
         void resetAssertionInfo();
         bool testForMissingAssertions( Counts& assertions );
@@ -9715,13 +9722,13 @@ namespace Catch {
     ///////////////////////////////////////////////////////////////////////////
 
     class TestInvokerAsFunction final : public ITestInvoker {
-        using TestType = void(*)();
+        using TestType = tc::cotask<void>(*)();
         TestType m_testAsFunction;
     public:
         TestInvokerAsFunction(TestType testAsFunction) noexcept:
             m_testAsFunction(testAsFunction) {}
 
-        void invoke() const override;
+        tc::cotask<void> invoke() const override;
     };
 
     ///////////////////////////////////////////////////////////////////////////

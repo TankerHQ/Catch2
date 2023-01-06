@@ -33,7 +33,7 @@ int main (int argc, char * argv[]) {
     // and its constructor, as it (optionally) registers leak detector
     (void)&Catch::leakDetector;
 
-    return Catch::Session().run( argc, argv );
+    return tc::async_resumable([&]() -> tc::cotask<int> { TC_RETURN(TC_AWAIT(Catch::Session().run( argc, argv ))); }).get();
 }
 
 #endif // !defined(CATCH_AMALGAMATED_CUSTOM_MAIN

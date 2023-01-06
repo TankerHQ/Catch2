@@ -103,11 +103,11 @@ namespace Catch {
                 m_tests = createShard(m_tests, m_config->shardCount(), m_config->shardIndex());
             }
 
-            Totals execute() {
+            tc::cotask<Totals> execute() {
                 Totals totals;
                 for (auto const& testCase : m_tests) {
                     if (!m_context.aborting())
-                        totals += m_context.runTest(*testCase);
+                        totals += TC_AWAIT(m_context.runTest(*testCase));
                     else
                         m_reporter->skipTest(testCase->getTestCaseInfo());
                 }
@@ -119,7 +119,7 @@ namespace Catch {
                     }
                 }
 
-                return totals;
+                TC_RETURN(totals);
             }
 
             bool hadUnmatchedTestSpecs() const {
@@ -255,17 +255,17 @@ namespace Catch {
         m_config.reset();
     }
 
-    int Session::run() {
+    tc::cotask<int> Session::run() {
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeStart ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before starting\n" << std::flush;
             static_cast<void>(std::getchar());
         }
-        int exitCode = runInternal();
+        int exitCode = TC_AWAIT(runInternal());
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeExit ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before exiting, with code: " << exitCode << '\n' << std::flush;
             static_cast<void>(std::getchar());
         }
-        return exitCode;
+        TC_RETURN(exitCode);
     }
 
     Clara::Parser const& Session::cli() const {
@@ -283,12 +283,12 @@ namespace Catch {
         return *m_config;
     }
 
-    int Session::runInternal() {
+    tc::cotask<int> Session::runInternal() {
         if( m_startupExceptions )
-            return 1;
+            TC_RETURN(1);
 
         if (m_configData.showHelp || m_configData.libIdentify) {
-            return 0;
+            TC_RETURN(0);
         }
 
         if ( m_configData.shardIndex >= m_configData.shardCount ) {
@@ -296,7 +296,7 @@ namespace Catch {
                           << ") must be greater than the shard index ("
                           << m_configData.shardIndex << ")\n"
                           << std::flush;
-            return 1;
+            TC_RETURN(1);
         }
 
         CATCH_TRY {
@@ -319,37 +319,37 @@ namespace Catch {
                 for ( auto const& spec : invalidSpecs ) {
                     reporter->reportInvalidTestSpec( spec );
                 }
-                return 1;
+                TC_RETURN(1);
             }
 
 
             // Handle list request
             if (list(*reporter, *m_config)) {
-                return 0;
+                TC_RETURN(0);
             }
 
             TestGroup tests { CATCH_MOVE(reporter), m_config.get() };
-            auto const totals = tests.execute();
+            auto const totals = TC_AWAIT(tests.execute());
 
             if ( tests.hadUnmatchedTestSpecs()
                 && m_config->warnAboutUnmatchedTestSpecs() ) {
-                return 3;
+                TC_RETURN(3);
             }
 
             if ( totals.testCases.total() == 0
                 && !m_config->zeroTestsCountAsSuccess() ) {
-                return 2;
+                TC_RETURN(2);
             }
 
             // Note that on unices only the lower 8 bits are usually used, clamping
             // the return value to 255 prevents false negative when some multiple
             // of 256 tests has failed
-            return (std::min) (MaxExitCode, static_cast<int>(totals.assertions.failed));
+            TC_RETURN((std::min) (MaxExitCode, static_cast<int>(totals.assertions.failed)));
         }
 #if !defined(CATCH_CONFIG_DISABLE_EXCEPTIONS)
         catch( std::exception& ex ) {
             Catch::cerr() << ex.what() << '\n' << std::flush;
-            return MaxExitCode;
+            TC_RETURN(MaxExitCode);
         }
 #endif
     }

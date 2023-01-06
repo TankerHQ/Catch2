@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: BSL-1.0
 
 //  Catch v3.2.1
-//  Generated: 2022-12-09 23:01:15.713081
+//  Generated: 2023-01-10 10:36:10.874548
 //  ----------------------------------------------------------
 //  This file is an amalgamation of multiple different files.
 //  You probably shouldn't edit it directly.
@@ -1015,11 +1015,11 @@ namespace Catch {
                 m_tests = createShard(m_tests, m_config->shardCount(), m_config->shardIndex());
             }
 
-            Totals execute() {
+            tc::cotask<Totals> execute() {
                 Totals totals;
                 for (auto const& testCase : m_tests) {
                     if (!m_context.aborting())
-                        totals += m_context.runTest(*testCase);
+                        totals += TC_AWAIT(m_context.runTest(*testCase));
                     else
                         m_reporter->skipTest(testCase->getTestCaseInfo());
                 }
@@ -1031,7 +1031,7 @@ namespace Catch {
                     }
                 }
 
-                return totals;
+                TC_RETURN(totals);
             }
 
             bool hadUnmatchedTestSpecs() const {
@@ -1167,17 +1167,17 @@ namespace Catch {
         m_config.reset();
     }
 
-    int Session::run() {
+    tc::cotask<int> Session::run() {
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeStart ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before starting\n" << std::flush;
             static_cast<void>(std::getchar());
         }
-        int exitCode = runInternal();
+        int exitCode = TC_AWAIT(runInternal());
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeExit ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before exiting, with code: " << exitCode << '\n' << std::flush;
             static_cast<void>(std::getchar());
         }
-        return exitCode;
+        TC_RETURN(exitCode);
     }
 
     Clara::Parser const& Session::cli() const {
@@ -1195,12 +1195,12 @@ namespace Catch {
         return *m_config;
     }
 
-    int Session::runInternal() {
+    tc::cotask<int> Session::runInternal() {
         if( m_startupExceptions )
-            return 1;
+            TC_RETURN(1);
 
         if (m_configData.showHelp || m_configData.libIdentify) {
-            return 0;
+            TC_RETURN(0);
         }
 
         if ( m_configData.shardIndex >= m_configData.shardCount ) {
@@ -1208,7 +1208,7 @@ namespace Catch {
                           << ") must be greater than the shard index ("
                           << m_configData.shardIndex << ")\n"
                           << std::flush;
-            return 1;
+            TC_RETURN(1);
         }
 
         CATCH_TRY {
@@ -1231,37 +1231,37 @@ namespace Catch {
                 for ( auto const& spec : invalidSpecs ) {
                     reporter->reportInvalidTestSpec( spec );
                 }
-                return 1;
+                TC_RETURN(1);
             }
 
 
             // Handle list request
             if (list(*reporter, *m_config)) {
-                return 0;
+                TC_RETURN(0);
             }
 
             TestGroup tests { CATCH_MOVE(reporter), m_config.get() };
-            auto const totals = tests.execute();
+            auto const totals = TC_AWAIT(tests.execute());
 
             if ( tests.hadUnmatchedTestSpecs()
                 && m_config->warnAboutUnmatchedTestSpecs() ) {
-                return 3;
+                TC_RETURN(3);
             }
 
             if ( totals.testCases.total() == 0
                 && !m_config->zeroTestsCountAsSuccess() ) {
-                return 2;
+                TC_RETURN(2);
             }
 
             // Note that on unices only the lower 8 bits are usually used, clamping
             // the return value to 255 prevents false negative when some multiple
             // of 256 tests has failed
-            return (std::min) (MaxExitCode, static_cast<int>(totals.assertions.failed));
+            TC_RETURN((std::min) (MaxExitCode, static_cast<int>(totals.assertions.failed)));
         }
 #if !defined(CATCH_CONFIG_DISABLE_EXCEPTIONS)
         catch( std::exception& ex ) {
             Catch::cerr() << ex.what() << '\n' << std::flush;
-            return MaxExitCode;
+            TC_RETURN(MaxExitCode);
         }
 #endif
     }
@@ -4344,7 +4344,7 @@ int main (int argc, char * argv[]) {
     // and its constructor, as it (optionally) registers leak detector
     (void)&Catch::leakDetector;
 
-    return Catch::Session().run( argc, argv );
+    return tc::async_resumable([&]() -> tc::cotask<int> { TC_RETURN(TC_AWAIT(Catch::Session().run( argc, argv ))); }).get();
 }
 
 #endif // !defined(CATCH_AMALGAMATED_CUSTOM_MAIN
@@ -5110,7 +5110,7 @@ namespace Catch {
         m_reporter->testRunEnded(TestRunStats(m_runInfo, m_totals, aborting()));
     }
 
-    Totals RunContext::runTest(TestCaseHandle const& testCase) {
+    tc::cotask<Totals> RunContext::runTest(TestCaseHandle const& testCase) {
         const Totals prevTotals = m_totals;
 
         std::string redirectedCout;
@@ -5169,7 +5169,7 @@ namespace Catch {
 
             const auto beforeRunTotals = m_totals;
             std::string oneRunCout, oneRunCerr;
-            runCurrentTest(oneRunCout, oneRunCerr);
+            TC_AWAIT(runCurrentTest(oneRunCout, oneRunCerr));
             redirectedCout += oneRunCout;
             redirectedCerr += oneRunCerr;
 
@@ -5196,7 +5196,7 @@ namespace Catch {
         m_activeTestCase = nullptr;
         m_testCaseTracker = nullptr;
 
-        return deltaTotals;
+        TC_RETURN(deltaTotals);
     }
 
 
@@ -5380,7 +5380,7 @@ namespace Catch {
         return m_totals.assertions.failed >= static_cast<std::size_t>(m_config->abortAfter());
     }
 
-    void RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
+    tc::cotask<void> RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
         auto const& testCaseInfo = m_activeTestCase->getTestCaseInfo();
         SectionInfo testCaseSection(testCaseInfo.lineInfo, testCaseInfo.name);
         m_reporter->sectionStarting(testCaseSection);
@@ -5396,15 +5396,15 @@ namespace Catch {
                 RedirectedStreams redirectedStreams(redirectedCout, redirectedCerr);
 
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #else
                 OutputRedirect r(redirectedCout, redirectedCerr);
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #endif
             } else {
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
             }
             duration = timer.getElapsedSeconds();
         } CATCH_CATCH_ANON (TestFailureException&) {
@@ -5429,7 +5429,7 @@ namespace Catch {
         m_reporter->sectionEnded(testCaseSectionStats);
     }
 
-    void RunContext::invokeActiveTestCase() {
+    tc::cotask<void> RunContext::invokeActiveTestCase() {
         // We need to engage a handler for signals/structured exceptions
         // before running the tests themselves, or the binary can crash
         // without failed test being reported.
@@ -5439,7 +5439,7 @@ namespace Catch {
         // destructor. This is annoying and ugly, but it makes them stfu.
         (void)_;
 
-        m_activeTestCase->invoke();
+        TC_AWAIT(m_activeTestCase->invoke());
     }
 
     void RunContext::handleUnfinishedSections() {
@@ -6073,8 +6073,8 @@ namespace Catch {
 
 
     ///////////////////////////////////////////////////////////////////////////
-    void TestInvokerAsFunction::invoke() const {
-        m_testAsFunction();
+    tc::cotask<void> TestInvokerAsFunction::invoke() const {
+        TC_AWAIT(m_testAsFunction());
     }
 
 } // end namespace Catch
@@ -6372,7 +6372,7 @@ namespace Catch {
         }
     } // namespace
 
-    Detail::unique_ptr<ITestInvoker> makeTestInvoker( void(*testAsFunction)() ) {
+    Detail::unique_ptr<ITestInvoker> makeTestInvoker( tc::cotask<void>(*testAsFunction)() ) {
         return Detail::make_unique<TestInvokerAsFunction>( testAsFunction );
     }
 

@@ -176,7 +176,7 @@ namespace Catch {
         m_reporter->testRunEnded(TestRunStats(m_runInfo, m_totals, aborting()));
     }
 
-    Totals RunContext::runTest(TestCaseHandle const& testCase) {
+    tc::cotask<Totals> RunContext::runTest(TestCaseHandle const& testCase) {
         const Totals prevTotals = m_totals;
 
         std::string redirectedCout;
@@ -235,7 +235,7 @@ namespace Catch {
 
             const auto beforeRunTotals = m_totals;
             std::string oneRunCout, oneRunCerr;
-            runCurrentTest(oneRunCout, oneRunCerr);
+            TC_AWAIT(runCurrentTest(oneRunCout, oneRunCerr));
             redirectedCout += oneRunCout;
             redirectedCerr += oneRunCerr;
 
@@ -262,7 +262,7 @@ namespace Catch {
         m_activeTestCase = nullptr;
         m_testCaseTracker = nullptr;
 
-        return deltaTotals;
+        TC_RETURN(deltaTotals);
     }
 
 
@@ -446,7 +446,7 @@ namespace Catch {
         return m_totals.assertions.failed >= static_cast<std::size_t>(m_config->abortAfter());
     }
 
-    void RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
+    tc::cotask<void> RunContext::runCurrentTest(std::string & redirectedCout, std::string & redirectedCerr) {
         auto const& testCaseInfo = m_activeTestCase->getTestCaseInfo();
         SectionInfo testCaseSection(testCaseInfo.lineInfo, testCaseInfo.name);
         m_reporter->sectionStarting(testCaseSection);
@@ -462,15 +462,15 @@ namespace Catch {
                 RedirectedStreams redirectedStreams(redirectedCout, redirectedCerr);
 
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #else
                 OutputRedirect r(redirectedCout, redirectedCerr);
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
 #endif
             } else {
                 timer.start();
-                invokeActiveTestCase();
+                TC_AWAIT(invokeActiveTestCase());
             }
             duration = timer.getElapsedSeconds();
         } CATCH_CATCH_ANON (TestFailureException&) {
@@ -495,7 +495,7 @@ namespace Catch {
         m_reporter->sectionEnded(testCaseSectionStats);
     }
 
-    void RunContext::invokeActiveTestCase() {
+    tc::cotask<void> RunContext::invokeActiveTestCase() {
         // We need to engage a handler for signals/structured exceptions
         // before running the tests themselves, or the binary can crash
         // without failed test being reported.
@@ -505,7 +505,7 @@ namespace Catch {
         // destructor. This is annoying and ugly, but it makes them stfu.
         (void)_;
 
-        m_activeTestCase->invoke();
+        TC_AWAIT(m_activeTestCase->invoke());
     }
 
     void RunContext::handleUnfinishedSections() {
